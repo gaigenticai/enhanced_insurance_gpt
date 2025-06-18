@@ -183,6 +183,17 @@ class DatabaseMigrator:
     def migration_002_user_management(self) -> str:
         """User management and authentication tables"""
         return """
+        -- Enum type for built-in user roles
+        DO $$ BEGIN
+            CREATE TYPE userrole AS ENUM (
+                'admin',
+                'underwriter',
+                'claims_adjuster',
+                'agent',
+                'viewer'
+            );
+        EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
         -- User roles
         CREATE TABLE IF NOT EXISTS roles (
             id SERIAL PRIMARY KEY,
@@ -201,6 +212,7 @@ class DatabaseMigrator:
             password_hash VARCHAR(255) NOT NULL,
             first_name VARCHAR(100),
             last_name VARCHAR(100),
+            role userrole NOT NULL DEFAULT 'viewer',
             phone VARCHAR(20),
             is_active BOOLEAN DEFAULT TRUE,
             is_verified BOOLEAN DEFAULT FALSE,
