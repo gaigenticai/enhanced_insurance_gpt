@@ -214,7 +214,18 @@ class ServiceRouter:
         }
     
     def get_service_for_path(self, path: str) -> Optional[str]:
-        """Determine which service should handle the request"""
+        """Determine which service should handle the request.
+
+        This now supports optional ``/api`` or ``/api/v1`` prefixes so that
+        frontend requests using versioned routes are correctly routed.
+        """
+
+        # Strip API version prefixes if present
+        for prefix in ("/api/v1", "/api"):
+            if path.startswith(prefix):
+                path = path[len(prefix):] or "/"
+                break
+
         for route_prefix, service_name in self.routes.items():
             if path.startswith(route_prefix):
                 return service_name

@@ -199,6 +199,8 @@ class TestServiceRouting:
         
         # Test various paths
         assert router.get_service_for_path("/auth/login") == "auth"
+        # Paths with API version prefixes should also resolve
+        assert router.get_service_for_path("/api/v1/auth/login") == "auth"
         assert router.get_service_for_path("/users/123") == "users"
         assert router.get_service_for_path("/policies/search") == "policies"
         assert router.get_service_for_path("/claims/456/documents") == "claims"
