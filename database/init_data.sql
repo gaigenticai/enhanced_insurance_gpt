@@ -622,7 +622,7 @@ SELECT
 FROM users u
 JOIN user_roles ur ON u.id = ur.user_id
 JOIN roles r ON ur.role_id = r.id
-WHERE u.status = 'active'
+WHERE u.is_active = TRUE
 AND r.is_active = TRUE
 AND (ur.expires_at IS NULL OR ur.expires_at > CURRENT_TIMESTAMP);
 
