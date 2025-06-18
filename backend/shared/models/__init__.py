@@ -123,7 +123,15 @@ class User(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     password_hash = Column(String(255), nullable=False)
     first_name = Column(String(100))
     last_name = Column(String(100))
-    role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.VIEWER)
+    role = Column(
+        SQLEnum(
+            UserRole,
+            name="userrole",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        default=UserRole.VIEWER,
+    )
     phone = Column(String(20))
     department = Column(String(100))
     employee_id = Column(String(50))
@@ -188,7 +196,14 @@ class Policy(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     expiration_date = Column(DateTime(timezone=True))
     
     # Status and Risk
-    status = Column(SQLEnum(PolicyStatus), nullable=False, default=PolicyStatus.DRAFT)
+    status = Column(
+        SQLEnum(
+            PolicyStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        default=PolicyStatus.DRAFT,
+    )
     risk_score = Column(Float)
     risk_factors = Column(JSONB, default=list)
     
@@ -232,7 +247,14 @@ class Claim(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     paid_amount = Column(DECIMAL(15, 2), default=0)
     
     # Status and Assignment
-    status = Column(SQLEnum(ClaimStatus), nullable=False, default=ClaimStatus.SUBMITTED)
+    status = Column(
+        SQLEnum(
+            ClaimStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        default=ClaimStatus.SUBMITTED,
+    )
     priority = Column(Integer, default=3)  # 1=High, 3=Normal, 5=Low
     assigned_to = Column(UUID(as_uuid=True), ForeignKey('users.id'))
     created_by = Column(UUID(as_uuid=True), ForeignKey('users.id'))
@@ -273,7 +295,13 @@ class Document(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     file_hash = Column(String(64))  # SHA-256
     
     # Classification
-    document_type = Column(SQLEnum(DocumentType), nullable=False)
+    document_type = Column(
+        SQLEnum(
+            DocumentType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+    )
     category = Column(String(100))
     tags = Column(ARRAY(String), default=list)
     
@@ -308,7 +336,13 @@ class DocumentAnalysis(Base, UUIDMixin, TimestampMixin):
     __tablename__ = 'document_analyses'
     
     document_id = Column(UUID(as_uuid=True), ForeignKey('documents.id', ondelete='CASCADE'), nullable=False)
-    agent_type = Column(SQLEnum(AgentType), nullable=False)
+    agent_type = Column(
+        SQLEnum(
+            AgentType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+    )
     
     # Analysis Results
     extracted_text = Column(Text)
@@ -375,7 +409,14 @@ class Workflow(Base, UUIDMixin, TimestampMixin):
     output_data = Column(JSONB, default=dict)
     
     # Execution
-    status = Column(SQLEnum(WorkflowStatus), nullable=False, default=WorkflowStatus.PENDING)
+    status = Column(
+        SQLEnum(
+            WorkflowStatus,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+        default=WorkflowStatus.PENDING,
+    )
     started_at = Column(DateTime(timezone=True))
     completed_at = Column(DateTime(timezone=True))
     
@@ -406,7 +447,13 @@ class AgentExecution(Base, UUIDMixin, TimestampMixin):
     __tablename__ = 'agent_executions'
     
     workflow_id = Column(UUID(as_uuid=True), ForeignKey('workflows.id', ondelete='CASCADE'), nullable=False)
-    agent_type = Column(SQLEnum(AgentType), nullable=False)
+    agent_type = Column(
+        SQLEnum(
+            AgentType,
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+        ),
+        nullable=False,
+    )
     
     # Execution Details
     agent_name = Column(String(100), nullable=False)
