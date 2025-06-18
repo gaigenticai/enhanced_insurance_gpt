@@ -564,6 +564,12 @@ async def login(request: Request):
     """Forward login request to auth service"""
     return await forward_to_service(request, "auth")
 
+# API versioned route for backward compatibility
+@app.post("/api/v1/auth/login")
+async def login_v1(request: Request):
+    """Forward login request (v1 path) to auth service"""
+    return await forward_to_service(request, "auth")
+
 @app.post("/auth/refresh")
 async def refresh_token(request: Request):
     """Forward token refresh to auth service"""
