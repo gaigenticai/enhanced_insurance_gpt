@@ -14,7 +14,6 @@ CREATE EXTENSION IF NOT EXISTS "btree_gist";
 SET timezone = 'UTC';
 
 -- Create custom types
-CREATE TYPE user_status AS ENUM ('active', 'inactive', 'suspended', 'pending_verification');
 CREATE TYPE policy_status AS ENUM ('draft', 'quoted', 'bound', 'active', 'cancelled', 'expired', 'suspended');
 CREATE TYPE claim_status AS ENUM ('reported', 'assigned', 'investigating', 'pending_approval', 'approved', 'denied', 'closed', 'reopened');
 CREATE TYPE document_status AS ENUM ('uploaded', 'processing', 'processed', 'approved', 'rejected', 'archived');
@@ -82,7 +81,7 @@ CREATE TABLE IF NOT EXISTS users (
     first_name VARCHAR(100),
     last_name VARCHAR(100),
     phone VARCHAR(20),
-    status user_status DEFAULT 'pending_verification',
+    is_active BOOLEAN DEFAULT TRUE,
     is_verified BOOLEAN DEFAULT FALSE,
     last_login TIMESTAMP WITH TIME ZONE,
     failed_login_attempts INTEGER DEFAULT 0,
@@ -482,7 +481,7 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 -- Create indexes for performance
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_status ON users(status) WHERE status != 'active';
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_users_active ON users(is_active);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_customers_customer_number ON customers(customer_number);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_customers_email ON customers(email);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_policies_policy_number ON policies(policy_number);
