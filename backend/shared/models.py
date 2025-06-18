@@ -80,7 +80,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     
     # Constraints
     __table_args__ = (
-        CheckConstraint("role IN ('admin', 'underwriter', 'claims_adjuster', 'broker', 'viewer')", name='valid_role'),
+        CheckConstraint("role IN ('admin', 'underwriter', 'claims_adjuster', 'agent', 'viewer')", name='valid_role'),
         Index('idx_users_email', 'email'),
         Index('idx_users_organization', 'organization_id'),
         Index('idx_users_role', 'role'),
