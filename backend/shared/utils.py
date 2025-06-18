@@ -35,7 +35,8 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import bcrypt
-import jwt
+from jose import jwt
+from jose.exceptions import JWTError, ExpiredSignatureError
 from functools import wraps
 import time
 import zipfile
@@ -129,9 +130,9 @@ class SecurityUtils:
         try:
             payload = jwt.decode(token, secret_key, algorithms=['HS256'])
             return payload
-        except jwt.ExpiredSignatureError:
+        except ExpiredSignatureError:
             raise SecurityError("Token has expired")
-        except jwt.InvalidTokenError:
+        except JWTError:
             raise SecurityError("Invalid token")
     
     @staticmethod

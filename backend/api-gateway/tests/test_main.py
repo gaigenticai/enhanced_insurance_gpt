@@ -9,7 +9,7 @@ import json
 import time
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime, timedelta
-import jwt
+from jose import jwt
 
 import httpx
 from fastapi.testclient import TestClient

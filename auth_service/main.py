@@ -17,8 +17,8 @@ from sqlalchemy import create_engine, MetaData, select, insert, update, and_
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
-import jwt
-from jwt.exceptions import InvalidTokenError
+from jose import jwt
+from jose.exceptions import JWTError
 import structlog
 
 # Configure structured logging
@@ -202,7 +202,7 @@ def verify_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
-    except InvalidTokenError as e:
+    except JWTError as e:
         logger.error("Token verification failed", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

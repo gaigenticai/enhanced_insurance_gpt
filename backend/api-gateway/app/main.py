@@ -12,7 +12,8 @@ from typing import Dict, List, Optional, Any
 import json
 import time
 import hashlib
-import jwt
+from jose import jwt
+from jose.exceptions import JWTError
 from contextlib import asynccontextmanager
 
 import uvicorn
@@ -176,7 +177,7 @@ class AuthManager:
                 
             return payload
             
-        except jwt.InvalidTokenError:
+        except JWTError:
             return None
     
     @staticmethod
