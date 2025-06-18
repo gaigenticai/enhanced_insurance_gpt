@@ -7,6 +7,9 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "vector";
 
+-- Enum type for user roles to align with SQLAlchemy models
+CREATE TYPE userrole AS ENUM ('admin', 'underwriter', 'claims_adjuster', 'agent', 'viewer');
+
 -- =============================================================================
 -- CORE TABLES
 -- =============================================================================
@@ -26,7 +29,7 @@ CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('admin', 'underwriter', 'claims_adjuster', 'broker', 'viewer')),
+    role userrole NOT NULL DEFAULT 'viewer',
     organization_id UUID REFERENCES organizations(id) ON DELETE CASCADE,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
