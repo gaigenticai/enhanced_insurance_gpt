@@ -650,8 +650,8 @@ INSERT INTO roles (name, description, permissions) VALUES
 ON CONFLICT (name) DO NOTHING;
 
 -- Insert default admin user (password: admin123)
-INSERT INTO users (id, email, password_hash, role, first_name, last_name, status, is_verified) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@zurich.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.PmvlIW', 'admin', 'System', 'Administrator', 'active', true)
+INSERT INTO users (id, email, password_hash, role, first_name, last_name, is_verified) VALUES
+('00000000-0000-0000-0000-000000000001', 'admin@zurich.com', '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/RK.PmvlIW', 'admin', 'System', 'Administrator', true)
 ON CONFLICT (email) DO NOTHING;
 
 -- Assign super_admin role to default admin

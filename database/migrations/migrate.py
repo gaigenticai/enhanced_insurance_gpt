@@ -111,16 +111,7 @@ class DatabaseMigrator:
             ("008", "create_workflow_tables", self.migration_008_workflow_tables),
             ("009", "create_audit_tables", self.migration_009_audit_tables),
             ("010", "create_notification_tables", self.migration_010_notification_tables),
-            ("011", "create_integration_tables", self.migration_011_integration_tables),
-            ("012", "create_analytics_tables", self.migration_012_analytics_tables),
-            ("013", "create_security_tables", self.migration_013_security_tables),
-            ("014", "create_ml_model_tables", self.migration_014_ml_model_tables),
-            ("015", "create_indexes_and_constraints", self.migration_015_indexes_constraints),
-            ("016", "create_views_and_functions", self.migration_016_views_functions),
-            ("017", "create_triggers_and_procedures", self.migration_017_triggers_procedures),
-            ("018", "insert_reference_data", self.migration_018_reference_data),
-            ("019", "create_partitions", self.migration_019_partitions),
-            ("020", "optimize_performance", self.migration_020_performance)
+            ("011", "add_user_profile_fields", self.migration_011_add_user_profile_fields)
         ]
         
         for version, name, migration_func in migrations:
@@ -1003,6 +994,19 @@ class DatabaseMigrator:
             unsubscribed_at TIMESTAMP WITH TIME ZONE,
             spam_reported_at TIMESTAMP WITH TIME ZONE
         );
+        """
+
+    def migration_011_add_user_profile_fields(self) -> str:
+        """Add profile-related fields to users table"""
+        return """
+        ALTER TABLE users
+            DROP COLUMN IF EXISTS status,
+            ADD COLUMN IF NOT EXISTS department VARCHAR(100),
+            ADD COLUMN IF NOT EXISTS employee_id VARCHAR(50),
+            ADD COLUMN IF NOT EXISTS preferences JSONB DEFAULT '{}'::jsonb,
+            ADD COLUMN IF NOT EXISTS notification_settings JSONB DEFAULT '{}'::jsonb,
+            ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMP WITH TIME ZONE,
+            ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE;
         """
 
 if __name__ == "__main__":
