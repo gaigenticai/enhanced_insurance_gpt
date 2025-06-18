@@ -181,7 +181,19 @@ class APIGateway:
         @self.app.middleware("http")
         async def auth_middleware(request: Request, call_next):
             # Skip auth for public endpoints
-            public_paths = ["/docs", "/redoc", "/openapi.json", "/health", "/metrics", "/api/v1/auth/"]
+            # Only allow unauthenticated access to specific auth endpoints
+            public_paths = [
+                "/docs",
+                "/redoc",
+                "/openapi.json",
+                "/health",
+                "/metrics",
+                "/api/v1/auth/login",
+                "/api/v1/auth/register",
+                "/api/v1/auth/token",
+                "/api/v1/auth/refresh",
+                "/api/v1/auth/password-reset",
+            ]
             
             if any(request.url.path.startswith(path) for path in public_paths):
                 return await call_next(request)
