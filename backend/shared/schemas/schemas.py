@@ -8,7 +8,7 @@ from typing import Optional, List, Dict, Any, Union
 from decimal import Decimal
 from enum import Enum, IntEnum
 import uuid
-from pydantic import BaseModel, Field, EmailStr, validator, root_validator
+from pydantic import BaseModel, Field, EmailStr, validator, root_validator, ConfigDict
 from pydantic.types import UUID4, Json
 import structlog
 
@@ -20,18 +20,19 @@ logger = structlog.get_logger(__name__)
 
 class BaseSchema(BaseModel):
     """Base schema with common configuration"""
-    
-    class Config:
-        orm_mode = True
-        use_enum_values = True
-        validate_assignment = True
-        arbitrary_types_allowed = True
-        json_encoders = {
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,
+        validate_assignment=True,
+        arbitrary_types_allowed=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             date: lambda v: v.isoformat(),
             Decimal: lambda v: float(v),
-            uuid.UUID: lambda v: str(v)
-        }
+            uuid.UUID: lambda v: str(v),
+        },
+    )
 
 class TimestampMixin(BaseModel):
     """Mixin for timestamp fields"""
