@@ -98,17 +98,31 @@ class BaseService(ABC, Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         
         try:
             with operation_timer:
-                # Convert Pydantic model to dict
-                obj_data = obj_in.dict()
-                
-                # Add audit fields if model supports them
-                if hasattr(self.model, 'created_by') and created_by:
-                    obj_data['created_by'] = created_by
-                if hasattr(self.model, 'organization_id') and organization_id:
-                    obj_data['organization_id'] = organization_id
-                
-                # Create database object
-                db_obj = self.model(**obj_data)
+                # Determine input type
+                if isinstance(obj_in, BaseModel):
+                    obj_data = obj_in.dict()
+                    if hasattr(self.model, 'created_by') and created_by:
+                        obj_data['created_by'] = created_by
+                    if hasattr(self.model, 'organization_id') and organization_id:
+                        obj_data['organization_id'] = organization_id
+                    db_obj = self.model(**obj_data)
+                elif isinstance(obj_in, self.model):
+                    db_obj = obj_in
+                    if hasattr(db_obj, 'created_by') and created_by:
+                        setattr(db_obj, 'created_by', created_by)
+                    if hasattr(db_obj, 'organization_id') and organization_id:
+                        setattr(db_obj, 'organization_id', organization_id)
+                elif isinstance(obj_in, dict):
+                    obj_data = obj_in.copy()
+                    if hasattr(self.model, 'created_by') and created_by:
+                        obj_data.setdefault('created_by', created_by)
+                    if hasattr(self.model, 'organization_id') and organization_id:
+                        obj_data.setdefault('organization_id', organization_id)
+                    db_obj = self.model(**obj_data)
+                else:
+                    raise ValidationException(
+                        f"Unsupported input type: {type(obj_in)}"
+                    )
                 
                 # Add to session and commit
                 self.db_session.add(db_obj)
