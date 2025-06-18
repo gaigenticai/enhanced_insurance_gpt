@@ -228,7 +228,7 @@ class PasswordReset(PasswordResetRequest):
     """Deprecated: use PasswordResetRequest instead."""
 
 # User Schemas
-class UserBase(BaseModel):
+class UserBase(BaseSchema):
     email: EmailStr
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -241,7 +241,7 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=8)
     organization_ids: List[UUID4] = []
 
-class UserUpdate(BaseModel):
+class UserUpdate(BaseSchema):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     phone: Optional[str] = None
@@ -261,7 +261,7 @@ class UserResponse(UserBase, TimestampMixin):
     notification_settings: Dict[str, Any] = {}
 
 # Organization Schemas
-class OrganizationBase(BaseModel):
+class OrganizationBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=255)
     code: str = Field(..., min_length=2, max_length=50)
     description: Optional[str] = None
@@ -272,7 +272,7 @@ class OrganizationBase(BaseModel):
 class OrganizationCreate(OrganizationBase):
     settings: Dict[str, Any] = {}
 
-class OrganizationUpdate(BaseModel):
+class OrganizationUpdate(BaseSchema):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     industry: Optional[str] = None
@@ -287,7 +287,7 @@ class OrganizationResponse(OrganizationBase, TimestampMixin):
     settings: Dict[str, Any] = {}
 
 # Policy Schemas
-class PolicyBase(BaseModel):
+class PolicyBase(BaseSchema):
     policy_type: str = Field(..., min_length=1, max_length=100)
     product_line: Optional[str] = None
     insured_name: str = Field(..., min_length=1, max_length=255)
@@ -311,7 +311,7 @@ class PolicyCreate(PolicyBase):
             raise ValueError('Expiration date must be after effective date')
         return v
 
-class PolicyUpdate(BaseModel):
+class PolicyUpdate(BaseSchema):
     policy_type: Optional[str] = Field(None, min_length=1, max_length=100)
     product_line: Optional[str] = None
     insured_name: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -341,7 +341,7 @@ class PolicyResponse(PolicyBase, TimestampMixin):
     created_by: Optional[UUID4] = None
 
 # Claim Schemas
-class ClaimBase(BaseModel):
+class ClaimBase(BaseSchema):
     incident_date: datetime
     incident_description: str = Field(..., min_length=10)
     incident_location: Optional[str] = None
@@ -353,7 +353,7 @@ class ClaimCreate(ClaimBase):
     organization_id: UUID4
     claim_data: Dict[str, Any] = {}
 
-class ClaimUpdate(BaseModel):
+class ClaimUpdate(BaseSchema):
     incident_description: Optional[str] = Field(None, min_length=10)
     incident_location: Optional[str] = None
     claimed_amount: Optional[PositiveFloat] = None
@@ -387,7 +387,7 @@ class ClaimResponse(ClaimBase, TimestampMixin):
     settlement_details: Dict[str, Any] = {}
 
 # Document Schemas
-class DocumentBase(BaseModel):
+class DocumentBase(BaseSchema):
     original_filename: str
     document_type: DocumentTypeEnum
     category: Optional[str] = None
@@ -399,7 +399,7 @@ class DocumentCreate(DocumentBase):
     claim_id: Optional[UUID4] = None
     access_level: str = "internal"
 
-class DocumentUpdate(BaseModel):
+class DocumentUpdate(BaseSchema):
     document_type: Optional[DocumentTypeEnum] = None
     category: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -422,13 +422,13 @@ class DocumentResponse(DocumentBase, TimestampMixin):
     is_encrypted: bool = False
     access_level: str = "internal"
 
-class DocumentUploadResponse(BaseModel):
+class DocumentUploadResponse(BaseSchema):
     document_id: UUID4
     upload_url: str
     expires_at: datetime
 
 # Workflow Schemas
-class WorkflowBase(BaseModel):
+class WorkflowBase(BaseSchema):
     workflow_type: str = Field(..., min_length=1, max_length=50)
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
@@ -439,7 +439,7 @@ class WorkflowCreate(WorkflowBase):
     input_data: Dict[str, Any] = {}
     metadata: Dict[str, Any] = {}
 
-class WorkflowUpdate(BaseModel):
+class WorkflowUpdate(BaseSchema):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     priority: Optional[int] = Field(None, ge=1, le=5)
@@ -464,7 +464,7 @@ class WorkflowResponse(WorkflowBase, TimestampMixin):
     metadata: Dict[str, Any] = {}
 
 # Agent Execution Schemas
-class AgentExecutionCreate(BaseModel):
+class AgentExecutionCreate(BaseSchema):
     workflow_id: UUID4
     agent_type: AgentTypeEnum
     agent_name: str
@@ -472,7 +472,7 @@ class AgentExecutionCreate(BaseModel):
     input_data: Dict[str, Any] = {}
     metadata: Dict[str, Any] = {}
 
-class AgentExecutionUpdate(BaseModel):
+class AgentExecutionUpdate(BaseSchema):
     output_data: Optional[Dict[str, Any]] = None
     status: Optional[str] = None
     success: Optional[bool] = None
@@ -500,12 +500,12 @@ class AgentExecutionResponse(TimestampMixin):
     metadata: Dict[str, Any] = {}
 
 # Analysis Schemas
-class DocumentAnalysisCreate(BaseModel):
+class DocumentAnalysisCreate(BaseSchema):
     document_id: UUID4
     agent_type: AgentTypeEnum
     model_version: Optional[str] = None
 
-class EvidenceAnalysisCreate(BaseModel):
+class EvidenceAnalysisCreate(BaseSchema):
     """Schema for creating evidence analysis records."""
     evidence_id: UUID4
     analysis_type: str
@@ -530,13 +530,13 @@ class DocumentAnalysisResponse(TimestampMixin):
     error_message: Optional[str] = None
 
 # Risk Assessment Schemas
-class RiskAssessmentRequest(BaseModel):
+class RiskAssessmentRequest(BaseSchema):
     policy_id: Optional[UUID4] = None
     claim_id: Optional[UUID4] = None
     assessment_type: str
     input_data: Dict[str, Any]
 
-class RiskAssessmentResponse(BaseModel):
+class RiskAssessmentResponse(BaseSchema):
     risk_score: float = Field(..., ge=0, le=1)
     risk_level: str  # low, medium, high
     risk_factors: List[str]
@@ -546,7 +546,7 @@ class RiskAssessmentResponse(BaseModel):
     assessment_date: datetime
 
 # Compliance Schemas
-class ComplianceCheckCreate(BaseModel):
+class ComplianceCheckCreate(BaseSchema):
     """Schema for creating a compliance check record."""
     entity_type: str
     entity_id: UUID4
@@ -556,7 +556,7 @@ class ComplianceCheckCreate(BaseModel):
     violations: List[Dict[str, Any]] = []
     check_data: Dict[str, Any] = {}
 
-class ComplianceCheckUpdate(BaseModel):
+class ComplianceCheckUpdate(BaseSchema):
     """Schema for updating a compliance check record."""
     compliance_status: Optional[ComplianceStatus] = None
     overall_score: Optional[float] = Field(None, ge=0, le=100)
@@ -576,7 +576,7 @@ class ComplianceCheckResponse(TimestampMixin):
     check_data: Dict[str, Any] = {}
 
 # Communication Schemas
-class CommunicationRequest(BaseModel):
+class CommunicationRequest(BaseSchema):
     recipient_type: str  # email, sms, notification
     recipient: str
     template_id: Optional[str] = None
@@ -585,7 +585,7 @@ class CommunicationRequest(BaseModel):
     priority: int = Field(3, ge=1, le=5)
     metadata: Dict[str, Any] = {}
 
-class CommunicationResponse(BaseModel):
+class CommunicationResponse(BaseSchema):
     id: UUID4
     status: str
     sent_at: Optional[datetime] = None
@@ -593,15 +593,15 @@ class CommunicationResponse(BaseModel):
     error_message: Optional[str] = None
 
 # Search and Filter Schemas
-class PaginationParams(BaseModel):
+class PaginationParams(BaseSchema):
     page: int = Field(1, ge=1)
     size: int = Field(20, ge=1, le=100)
 
-class SortParams(BaseModel):
+class SortParams(BaseSchema):
     sort_by: str = "created_at"
     sort_order: str = Field("desc", pattern="^(asc|desc)$")
 
-class PolicyFilter(BaseModel):
+class PolicyFilter(BaseSchema):
     organization_id: Optional[UUID4] = None
     policy_type: Optional[str] = None
     status: Optional[PolicyStatusEnum] = None
@@ -611,7 +611,7 @@ class PolicyFilter(BaseModel):
     risk_score_min: Optional[float] = Field(None, ge=0, le=1)
     risk_score_max: Optional[float] = Field(None, ge=0, le=1)
 
-class ClaimFilter(BaseModel):
+class ClaimFilter(BaseSchema):
     organization_id: Optional[UUID4] = None
     policy_id: Optional[UUID4] = None
     status: Optional[ClaimStatusEnum] = None
@@ -623,34 +623,34 @@ class ClaimFilter(BaseModel):
     priority: Optional[int] = Field(None, ge=1, le=5)
 
 # Response Wrappers
-class PaginatedResponse(BaseModel):
+class PaginatedResponse(BaseSchema):
     items: List[Any]
     total: int
     page: int
     size: int
     pages: int
 
-class APIResponse(BaseModel):
+class APIResponse(BaseSchema):
     success: bool = True
     message: Optional[str] = None
     data: Optional[Any] = None
     errors: Optional[List[str]] = None
 
-class ErrorResponse(BaseModel):
+class ErrorResponse(BaseSchema):
     success: bool = False
     message: str
     errors: List[str] = []
     error_code: Optional[str] = None
 
 # Health Check Schemas
-class HealthCheckResponse(BaseModel):
+class HealthCheckResponse(BaseSchema):
     status: str
     timestamp: datetime
     version: str
     services: Dict[str, str]
     uptime: float
 
-class MetricsResponse(BaseModel):
+class MetricsResponse(BaseSchema):
     cpu_usage: float
     memory_usage: float
     disk_usage: float
