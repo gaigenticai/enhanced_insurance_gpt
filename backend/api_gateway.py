@@ -264,7 +264,7 @@ class APIGateway:
                     # Create user
                     user = User(
                         email=user_data.email,
-                        hashed_password=hashed_password,
+                        password_hash=hashed_password,
                         first_name=user_data.first_name,
                         last_name=user_data.last_name,
                         phone=user_data.phone,
