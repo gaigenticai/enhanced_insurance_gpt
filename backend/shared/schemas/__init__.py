@@ -9,7 +9,7 @@ from decimal import Decimal
 from enum import Enum
 import uuid
 
-from pydantic import BaseModel, Field, EmailStr, validator, root_validator
+from pydantic import BaseModel, Field, EmailStr, validator, root_validator, ConfigDict
 from pydantic.types import UUID4, PositiveFloat, PositiveInt
 
 # Import additional underwriting submission schemas defined in the single-module
@@ -163,14 +163,15 @@ class ComplianceViolationType(str, Enum):
 
 # Base Schemas
 class BaseSchema(BaseModel):
-    class Config:
-        orm_mode = True
-        use_enum_values = True
-        json_encoders = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        use_enum_values=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             Decimal: lambda v: float(v),
-            uuid.UUID: lambda v: str(v)
-        }
+            uuid.UUID: lambda v: str(v),
+        },
+    )
 
 class TimestampMixin(BaseModel):
     created_at: datetime
