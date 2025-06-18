@@ -1,0 +1,10 @@
+# Plugins provisioning
+apiVersion: 1
+
+apps:
+  # No plugins to install by default
+  # Add plugin configurations here if needed
+  # Example:
+  # - type: grafana-clock-panel
+  #   jsonData:
+  #     path: /var/lib/grafana/plugins/grafana-clock-panel

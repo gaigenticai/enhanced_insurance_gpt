@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: insurance-ai
+  labels:
+    name: insurance-ai
+    environment: production
+    app.kubernetes.io/name: insurance-ai-system
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: namespace
+    app.kubernetes.io/part-of: insurance-ai-system
+    app.kubernetes.io/managed-by: kubernetes
+  annotations:
+    description: "Insurance AI Agent System namespace for all components"
+    contact: "devops@zurich.com"
+    cost-center: "insurance-technology"
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: insurance-ai-quota
+  namespace: insurance-ai
+spec:
+  hard:
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    persistentvolumeclaims: "10"
+    services: "20"
+    secrets: "20"
+    configmaps: "20"
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: insurance-ai-limits
+  namespace: insurance-ai
+spec:
+  limits:
+  - default:
+      cpu: "1"
+      memory: "2Gi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "256Mi"
+    type: Container
+  - default:
+      storage: "10Gi"
+    type: PersistentVolumeClaim
+

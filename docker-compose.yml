@@ -1,0 +1,352 @@
+version: '3.8'
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: insurance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-insurance_ai}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_INITDB_ARGS: --encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+    - postgres_data:/var/lib/postgresql/data
+    - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    - ./database/init_data.sql:/docker-entrypoint-initdb.d/02-init_data.sql:ro
+    ports:
+    - 5432:5432
+    networks:
+    - insurance-network
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-insurance_ai}
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+  redis:
+    image: redis:7-alpine
+    container_name: insurance-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis123}
+    volumes:
+    - redis_data:/data
+    - ./docker/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    ports:
+    - 6379:6379
+    networks:
+    - insurance-network
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - --raw
+      - incr
+      - ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: insurance-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-insurance_ai}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis123}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:-your-encryption-key-32-chars-long}
+      PASSWORD_SALT: ${PASSWORD_SALT:-your-password-salt}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      CREDIT_BUREAU_API_KEY: ${CREDIT_BUREAU_API_KEY}
+      FRAUD_DETECTION_API_KEY: ${FRAUD_DETECTION_API_KEY}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,https://localhost:3000}
+    volumes:
+    - backend_logs:/app/logs
+    - backend_uploads:/app/uploads
+    - backend_data:/app/data
+    ports:
+    - 8000:8000
+    networks:
+    - insurance-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8000/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: insurance-frontend
+    restart: unless-stopped
+    ports:
+    - 80:80
+    - 443:443
+    networks:
+    - insurance-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:80/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: insurance-prometheus
+    restart: unless-stopped
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.path=/prometheus
+    - --web.console.libraries=/etc/prometheus/console_libraries
+    - --web.console.templates=/etc/prometheus/consoles
+    - --storage.tsdb.retention.time=200h
+    - --web.enable-lifecycle
+    volumes:
+    - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    - prometheus_data:/prometheus
+    ports:
+    - 9090:9090
+    networks:
+    - insurance-network
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://localhost:9090/-/healthy
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  grafana:
+    image: grafana/grafana:latest
+    container_name: insurance-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+    volumes:
+    - grafana_data:/var/lib/grafana
+    - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+    - 3000:3000
+    networks:
+    - insurance-network
+    depends_on:
+    - prometheus
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --no-verbose --tries=1 --spider http://localhost:3000/api/health || exit
+        1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: insurance-elasticsearch
+    restart: unless-stopped
+    environment:
+    - discovery.type=single-node
+    - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    - xpack.security.enabled=false
+    - xpack.security.enrollment.enabled=false
+    volumes:
+    - elasticsearch_data:/usr/share/elasticsearch/data
+    ports:
+    - 9200:9200
+    networks:
+    - insurance-network
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:9200/_cluster/health || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: insurance-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+    ports:
+    - 5601:5601
+    networks:
+    - insurance-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl -f http://localhost:5601/api/status || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: insurance-logstash
+    restart: unless-stopped
+    volumes:
+    - ./docker/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    - ./docker/logstash/config:/usr/share/logstash/config:ro
+    - backend_logs:/app/logs:ro
+    ports:
+    - 5044:5044
+    - 9600:9600
+    networks:
+    - insurance-network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    environment:
+      LS_JAVA_OPTS: -Xmx256m -Xms256m
+  minio:
+    image: minio/minio:latest
+    container_name: insurance-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+    - minio_data:/data
+    ports:
+    - 9000:9000
+    - 9001:9001
+    networks:
+    - insurance-network
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:9000/minio/health/live
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  nginx-lb:
+    image: nginx:alpine
+    container_name: insurance-nginx-lb
+    restart: unless-stopped
+    volumes:
+    - ./docker/nginx-lb.conf:/etc/nginx/nginx.conf:ro
+    ports:
+    - 8080:80
+    networks:
+    - insurance-network
+    depends_on:
+    - backend
+    healthcheck:
+      test:
+      - CMD
+      - wget
+      - --no-verbose
+      - --tries=1
+      - --spider
+      - http://localhost:80/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  backup:
+    image: pgvector/pgvector:pg15
+    container_name: insurance-backup
+    restart: 'no'
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+    - ./backups:/backups
+    - ./docker/backup.sh:/backup.sh:ro
+    networks:
+    - insurance-network
+    depends_on:
+    - postgres
+    command: /bin/sh -c "chmod +x /backup.sh && /backup.sh"
+  auth_service:
+    build:
+      context: ./auth_service
+      dockerfile: Dockerfile
+    container_name: insurance-auth-service
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-insurance_ai}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      ACCESS_TOKEN_EXPIRE_HOURS: ${ACCESS_TOKEN_EXPIRE_HOURS:-24}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+    - 8001:8001
+    networks:
+    - insurance-network
+    healthcheck:
+      test:
+      - CMD
+      - curl
+      - -f
+      - http://localhost:8001/health
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+networks:
+  insurance-network:
+    driver: bridge
+    ipam:
+      config:
+      - subnet: 172.20.0.0/16
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  backend_logs:
+    driver: local
+  backend_uploads:
+    driver: local
+  backend_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  elasticsearch_data:
+    driver: local
+  minio_data:
+    driver: local

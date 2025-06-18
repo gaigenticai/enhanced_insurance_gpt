@@ -1,0 +1,416 @@
+# Prometheus Alert Rules - Production Ready
+# Comprehensive alerting for Insurance AI Agent System
+
+groups:
+  # System Health Alerts
+  - name: system_health
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Service {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+          runbook_url: "https://docs.insurance-ai.com/runbooks/service-down"
+
+      - alert: HighErrorRate
+        expr: |
+          (
+            rate(http_requests_total{status=~"5.."}[5m]) /
+            rate(http_requests_total[5m])
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "High error rate on {{ $labels.instance }}"
+          description: "Error rate is {{ $value | humanizePercentage }} on {{ $labels.instance }} for the last 5 minutes."
+
+      - alert: HighResponseTime
+        expr: |
+          histogram_quantile(0.95, 
+            rate(http_request_duration_seconds_bucket[5m])
+          ) > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High response time on {{ $labels.instance }}"
+          description: "95th percentile response time is {{ $value }}s on {{ $labels.instance }}."
+
+      - alert: HighMemoryUsage
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}."
+
+      - alert: HighCPUUsage
+        expr: |
+          100 - (
+            avg by (instance) (
+              irate(node_cpu_seconds_total{mode="idle"}[5m])
+            ) * 100
+          ) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}."
+
+      - alert: HighDiskUsage
+        expr: |
+          (
+            1 - (
+              node_filesystem_avail_bytes{fstype!="tmpfs"} /
+              node_filesystem_size_bytes{fstype!="tmpfs"}
+            )
+          ) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: resource
+        annotations:
+          summary: "High disk usage on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} {{ $labels.mountpoint }}."
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (
+            1 - (
+              node_filesystem_avail_bytes{fstype!="tmpfs"} /
+              node_filesystem_size_bytes{fstype!="tmpfs"}
+            )
+          ) * 100 > 95
+        for: 1m
+        labels:
+          severity: critical
+          category: resource
+        annotations:
+          summary: "Critical disk space on {{ $labels.instance }}"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} {{ $labels.mountpoint }}."
+
+  # Database Alerts
+  - name: database_alerts
+    rules:
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "PostgreSQL is down"
+          description: "PostgreSQL database is not responding."
+
+      - alert: PostgreSQLTooManyConnections
+        expr: |
+          sum(pg_stat_database_numbackends) by (instance) /
+          pg_settings_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL has too many connections"
+          description: "PostgreSQL has {{ $value }}% of max connections in use."
+
+      - alert: PostgreSQLSlowQueries
+        expr: |
+          rate(pg_stat_database_tup_returned[5m]) /
+          rate(pg_stat_database_tup_fetched[5m]) < 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL slow queries detected"
+          description: "PostgreSQL query efficiency is {{ $value | humanizePercentage }}."
+
+      - alert: PostgreSQLReplicationLag
+        expr: |
+          pg_stat_replication_replay_lag > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "PostgreSQL replication lag"
+          description: "PostgreSQL replication lag is {{ $value }}s."
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: cache
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache is not responding."
+
+      - alert: RedisHighMemoryUsage
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is {{ $value }}%."
+
+      - alert: RedisSlowLog
+        expr: |
+          increase(redis_slowlog_length[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: cache
+        annotations:
+          summary: "Redis slow queries detected"
+          description: "Redis has {{ $value }} slow queries in the last 5 minutes."
+
+  # AI Agent Alerts
+  - name: ai_agent_alerts
+    rules:
+      - alert: AIAgentDown
+        expr: ai_agent_health_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: ai_agent
+        annotations:
+          summary: "AI Agent {{ $labels.agent_name }} is down"
+          description: "AI Agent {{ $labels.agent_name }} is not responding for more than 2 minutes."
+
+      - alert: AIAgentHighProcessingTime
+        expr: |
+          histogram_quantile(0.95,
+            rate(agent_processing_duration_seconds_bucket[5m])
+          ) > 30
+        for: 5m
+        labels:
+          severity: warning
+          category: ai_agent
+        annotations:
+          summary: "AI Agent {{ $labels.agent_name }} high processing time"
+          description: "95th percentile processing time is {{ $value }}s for {{ $labels.agent_name }}."
+
+      - alert: AIAgentLowSuccessRate
+        expr: |
+          rate(agent_operations_total{status="success"}[5m]) /
+          rate(agent_operations_total[5m]) < 0.95
+        for: 10m
+        labels:
+          severity: warning
+          category: ai_agent
+        annotations:
+          summary: "AI Agent {{ $labels.agent_name }} low success rate"
+          description: "Success rate is {{ $value | humanizePercentage }} for {{ $labels.agent_name }}."
+
+      - alert: DocumentProcessingBacklog
+        expr: document_processing_queue_size > 100
+        for: 10m
+        labels:
+          severity: warning
+          category: ai_agent
+        annotations:
+          summary: "Document processing backlog"
+          description: "Document processing queue has {{ $value }} items."
+
+      - alert: EvidenceProcessingBacklog
+        expr: evidence_processing_queue_size > 50
+        for: 10m
+        labels:
+          severity: warning
+          category: ai_agent
+        annotations:
+          summary: "Evidence processing backlog"
+          description: "Evidence processing queue has {{ $value }} items."
+
+      - alert: RiskAssessmentAccuracyLow
+        expr: risk_assessment_accuracy_score < 0.85
+        for: 15m
+        labels:
+          severity: warning
+          category: ai_agent
+        annotations:
+          summary: "Risk assessment accuracy is low"
+          description: "Risk assessment accuracy is {{ $value | humanizePercentage }}."
+
+  # Business Process Alerts
+  - name: business_process_alerts
+    rules:
+      - alert: ClaimsProcessingBacklog
+        expr: claims_processing_queue_size > 100
+        for: 15m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Claims processing backlog"
+          description: "Claims processing queue has {{ $value }} items."
+
+      - alert: UnderwritingBacklog
+        expr: underwriting_queue_size > 50
+        for: 15m
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Underwriting backlog"
+          description: "Underwriting queue has {{ $value }} items."
+
+      - alert: HighClaimsRatio
+        expr: |
+          increase(claims_paid_total[30d]) /
+          increase(premium_collected_total[30d]) > 0.8
+        for: 1h
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "High claims ratio detected"
+          description: "30-day claims ratio is {{ $value | humanizePercentage }}."
+
+      - alert: LowPolicyConversionRate
+        expr: |
+          rate(policies_bound_total[1h]) /
+          rate(quotes_generated_total[1h]) < 0.1
+        for: 2h
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low policy conversion rate"
+          description: "Policy conversion rate is {{ $value | humanizePercentage }}."
+
+      - alert: LowCustomerSatisfaction
+        expr: avg(customer_satisfaction_score) < 3.5
+        for: 1h
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Low customer satisfaction"
+          description: "Average customer satisfaction score is {{ $value }}."
+
+      - alert: FraudDetectionRateLow
+        expr: fraud_detection_rate < 0.02
+        for: 1h
+        labels:
+          severity: warning
+          category: business
+        annotations:
+          summary: "Fraud detection rate is low"
+          description: "Fraud detection rate is {{ $value | humanizePercentage }}."
+
+  # Security Alerts
+  - name: security_alerts
+    rules:
+      - alert: HighFailedLoginAttempts
+        expr: |
+          increase(failed_login_attempts_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High failed login attempts"
+          description: "{{ $value }} failed login attempts in the last 5 minutes from {{ $labels.source_ip }}."
+
+      - alert: SuspiciousAPIActivity
+        expr: |
+          increase(api_requests_total{status="401"}[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Suspicious API activity"
+          description: "{{ $value }} unauthorized API requests in the last 5 minutes."
+
+      - alert: DataExfiltrationAttempt
+        expr: |
+          increase(data_export_requests_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Potential data exfiltration attempt"
+          description: "{{ $value }} data export requests in the last 5 minutes from {{ $labels.user_id }}."
+
+      - alert: UnauthorizedAccessAttempt
+        expr: |
+          increase(unauthorized_access_attempts_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Unauthorized access attempts"
+          description: "{{ $value }} unauthorized access attempts in the last 5 minutes."
+
+  # Integration Alerts
+  - name: integration_alerts
+    rules:
+      - alert: ExternalAPIFailure
+        expr: |
+          rate(external_api_calls_total{status=~"5.."}[5m]) /
+          rate(external_api_calls_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "External API {{ $labels.api_name }} failure rate high"
+          description: "External API failure rate is {{ $value | humanizePercentage }}."
+
+      - alert: ExternalAPITimeout
+        expr: |
+          histogram_quantile(0.95,
+            rate(external_api_duration_seconds_bucket[5m])
+          ) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "External API {{ $labels.api_name }} timeout"
+          description: "95th percentile API response time is {{ $value }}s."
+
+      - alert: MessageQueueBacklog
+        expr: message_queue_size > 1000
+        for: 10m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "Message queue backlog"
+          description: "Message queue has {{ $value }} messages."
+
+      - alert: WebhookDeliveryFailure
+        expr: |
+          rate(webhook_delivery_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: integration
+        annotations:
+          summary: "Webhook delivery failures"
+          description: "Webhook delivery failure rate is {{ $value }} per second."
+

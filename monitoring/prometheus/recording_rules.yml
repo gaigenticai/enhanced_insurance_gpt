@@ -1,0 +1,273 @@
+# Prometheus Recording Rules - Production Ready
+# Pre-computed metrics for Insurance AI Agent System
+
+groups:
+  # HTTP Request Metrics
+  - name: http_requests
+    interval: 30s
+    rules:
+      - record: http:request_rate_5m
+        expr: |
+          rate(http_requests_total[5m])
+
+      - record: http:request_rate_1h
+        expr: |
+          rate(http_requests_total[1h])
+
+      - record: http:error_rate_5m
+        expr: |
+          rate(http_requests_total{status=~"4..|5.."}[5m]) /
+          rate(http_requests_total[5m])
+
+      - record: http:response_time_95th_5m
+        expr: |
+          histogram_quantile(0.95,
+            rate(http_request_duration_seconds_bucket[5m])
+          )
+
+      - record: http:response_time_50th_5m
+        expr: |
+          histogram_quantile(0.50,
+            rate(http_request_duration_seconds_bucket[5m])
+          )
+
+  # AI Agent Performance Metrics
+  - name: ai_agent_performance
+    interval: 30s
+    rules:
+      - record: ai_agent:processing_time_95th_5m
+        expr: |
+          histogram_quantile(0.95,
+            rate(agent_processing_duration_seconds_bucket[5m])
+          )
+
+      - record: ai_agent:success_rate_5m
+        expr: |
+          rate(agent_operations_total{status="success"}[5m]) /
+          rate(agent_operations_total[5m])
+
+      - record: ai_agent:throughput_5m
+        expr: |
+          rate(agent_operations_total[5m])
+
+      - record: ai_agent:error_rate_5m
+        expr: |
+          rate(agent_operations_total{status="error"}[5m]) /
+          rate(agent_operations_total[5m])
+
+  # Business Metrics
+  - name: business_metrics
+    interval: 1m
+    rules:
+      - record: business:policy_conversion_rate_1h
+        expr: |
+          rate(policies_bound_total[1h]) /
+          rate(quotes_generated_total[1h])
+
+      - record: business:claims_ratio_30d
+        expr: |
+          increase(claims_paid_total[30d]) /
+          increase(premium_collected_total[30d])
+
+      - record: business:premium_volume_daily
+        expr: |
+          increase(premium_collected_total[24h])
+
+      - record: business:claims_settlement_time_95th
+        expr: |
+          histogram_quantile(0.95,
+            rate(claim_settlement_duration_days_bucket[24h])
+          )
+
+      - record: business:stp_rate_24h
+        expr: |
+          rate(automated_decisions_total[24h]) /
+          rate(total_decisions_total[24h])
+
+      - record: business:customer_satisfaction_avg
+        expr: |
+          avg(customer_satisfaction_score)
+
+  # System Resource Metrics
+  - name: system_resources
+    interval: 30s
+    rules:
+      - record: system:cpu_usage_percent
+        expr: |
+          100 - (
+            avg by (instance) (
+              irate(node_cpu_seconds_total{mode="idle"}[5m])
+            ) * 100
+          )
+
+      - record: system:memory_usage_percent
+        expr: |
+          (
+            1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)
+          ) * 100
+
+      - record: system:disk_usage_percent
+        expr: |
+          (
+            1 - (
+              node_filesystem_avail_bytes{fstype!="tmpfs"} /
+              node_filesystem_size_bytes{fstype!="tmpfs"}
+            )
+          ) * 100
+
+      - record: system:network_receive_rate
+        expr: |
+          rate(node_network_receive_bytes_total[5m])
+
+      - record: system:network_transmit_rate
+        expr: |
+          rate(node_network_transmit_bytes_total[5m])
+
+  # Database Performance Metrics
+  - name: database_performance
+    interval: 30s
+    rules:
+      - record: db:connection_usage_percent
+        expr: |
+          sum(pg_stat_database_numbackends) by (instance) /
+          pg_settings_max_connections * 100
+
+      - record: db:query_rate_5m
+        expr: |
+          rate(pg_stat_database_xact_commit[5m]) +
+          rate(pg_stat_database_xact_rollback[5m])
+
+      - record: db:cache_hit_ratio
+        expr: |
+          pg_stat_database_blks_hit /
+          (pg_stat_database_blks_hit + pg_stat_database_blks_read)
+
+      - record: redis:memory_usage_percent
+        expr: |
+          redis_memory_used_bytes / redis_memory_max_bytes * 100
+
+      - record: redis:hit_ratio
+        expr: |
+          rate(redis_keyspace_hits_total[5m]) /
+          (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))
+
+  # Queue and Processing Metrics
+  - name: queue_metrics
+    interval: 30s
+    rules:
+      - record: queue:total_backlog
+        expr: |
+          claims_processing_queue_size +
+          underwriting_queue_size +
+          document_processing_queue_size +
+          evidence_processing_queue_size
+
+      - record: queue:processing_rate_5m
+        expr: |
+          rate(claims_processed_total[5m]) +
+          rate(underwriting_decisions_total[5m]) +
+          rate(documents_processed_total[5m]) +
+          rate(evidence_processed_total[5m])
+
+      - record: queue:average_wait_time
+        expr: |
+          (
+            claims_processing_queue_wait_time_sum +
+            underwriting_queue_wait_time_sum +
+            document_processing_queue_wait_time_sum +
+            evidence_processing_queue_wait_time_sum
+          ) /
+          (
+            claims_processing_queue_wait_time_count +
+            underwriting_queue_wait_time_count +
+            document_processing_queue_wait_time_count +
+            evidence_processing_queue_wait_time_count
+          )
+
+  # Security Metrics
+  - name: security_metrics
+    interval: 1m
+    rules:
+      - record: security:failed_login_rate_5m
+        expr: |
+          rate(failed_login_attempts_total[5m])
+
+      - record: security:unauthorized_access_rate_5m
+        expr: |
+          rate(unauthorized_access_attempts_total[5m])
+
+      - record: security:api_abuse_rate_5m
+        expr: |
+          rate(api_requests_total{status="429"}[5m])
+
+      - record: security:fraud_detection_rate_24h
+        expr: |
+          rate(fraud_detected_total[24h]) /
+          rate(claims_processed_total[24h])
+
+  # Integration Health Metrics
+  - name: integration_health
+    interval: 30s
+    rules:
+      - record: integration:api_success_rate_5m
+        expr: |
+          rate(external_api_calls_total{status=~"2.."}[5m]) /
+          rate(external_api_calls_total[5m])
+
+      - record: integration:api_response_time_95th
+        expr: |
+          histogram_quantile(0.95,
+            rate(external_api_duration_seconds_bucket[5m])
+          )
+
+      - record: integration:webhook_success_rate_5m
+        expr: |
+          rate(webhook_delivery_success_total[5m]) /
+          (rate(webhook_delivery_success_total[5m]) + rate(webhook_delivery_failures_total[5m]))
+
+      - record: integration:message_queue_throughput_5m
+        expr: |
+          rate(message_queue_processed_total[5m])
+
+  # Application Health Score
+  - name: health_scores
+    interval: 1m
+    rules:
+      - record: health:overall_system_score
+        expr: |
+          (
+            avg(up) * 0.3 +
+            (1 - avg(http:error_rate_5m)) * 0.2 +
+            avg(ai_agent:success_rate_5m) * 0.2 +
+            (1 - avg(system:cpu_usage_percent) / 100) * 0.1 +
+            (1 - avg(system:memory_usage_percent) / 100) * 0.1 +
+            avg(integration:api_success_rate_5m) * 0.1
+          )
+
+      - record: health:ai_agent_score
+        expr: |
+          (
+            avg(ai_agent_health_status) * 0.4 +
+            avg(ai_agent:success_rate_5m) * 0.3 +
+            (1 - avg(ai_agent:error_rate_5m)) * 0.3
+          )
+
+      - record: health:database_score
+        expr: |
+          (
+            avg(pg_up) * 0.3 +
+            avg(redis_up) * 0.2 +
+            (1 - avg(db:connection_usage_percent) / 100) * 0.2 +
+            avg(db:cache_hit_ratio) * 0.15 +
+            avg(redis:hit_ratio) * 0.15
+          )
+
+      - record: health:business_process_score
+        expr: |
+          (
+            min(business:policy_conversion_rate_1h * 10, 1) * 0.25 +
+            min(1 - business:claims_ratio_30d, 1) * 0.25 +
+            min(business:stp_rate_24h, 1) * 0.25 +
+            min(business:customer_satisfaction_avg / 5, 1) * 0.25
+          )
+

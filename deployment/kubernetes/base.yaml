@@ -1,0 +1,195 @@
+# Kubernetes Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: insurance-ai
+  labels:
+    name: insurance-ai
+    environment: production
+    app: insurance-ai-system
+---
+# PostgreSQL ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: insurance-ai
+data:
+  POSTGRES_DB: insurance_ai
+  POSTGRES_USER: postgres
+  POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+---
+# Redis ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: insurance-ai
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode yes
+    save 900 1
+    save 300 10
+    save 60 10000
+    appendonly yes
+    appendfsync everysec
+    maxmemory 2gb
+    maxmemory-policy allkeys-lru
+    timeout 300
+    tcp-keepalive 300
+    maxclients 10000
+    slowlog-log-slower-than 10000
+    slowlog-max-len 128
+---
+# Application ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: insurance-ai
+data:
+  FLASK_ENV: production
+  LOG_LEVEL: INFO
+  LOG_FORMAT: json
+  CORS_ORIGINS: "https://insurance-ai.com,https://app.insurance-ai.com"
+  MAX_CONTENT_LENGTH: "104857600"
+  PROMETHEUS_MULTIPROC_DIR: "/tmp/prometheus_multiproc"
+  UPLOAD_FOLDER: "/app/uploads"
+  JWT_ACCESS_TOKEN_EXPIRES: "3600"
+  JWT_REFRESH_TOKEN_EXPIRES: "2592000"
+  RATE_LIMIT_PER_MINUTE: "60"
+  RATE_LIMIT_PER_HOUR: "1000"
+  ENABLE_AI_AGENTS: "true"
+  ENABLE_DOCUMENT_ANALYSIS: "true"
+  ENABLE_EVIDENCE_PROCESSING: "true"
+  ENABLE_RISK_ASSESSMENT: "true"
+  ENABLE_FRAUD_DETECTION: "true"
+  ENABLE_AUTOMATED_UNDERWRITING: "true"
+  ENABLE_AUTOMATED_CLAIMS: "true"
+  ENABLE_AUDIT_LOGGING: "true"
+  DEFAULT_TIMEZONE: "UTC"
+  MAX_POLICY_AMOUNT: "10000000"
+  MIN_POLICY_AMOUNT: "1000"
+  MAX_CLAIM_AMOUNT: "5000000"
+  HIGH_RISK_THRESHOLD: "0.8"
+  MEDIUM_RISK_THRESHOLD: "0.5"
+  LOW_RISK_THRESHOLD: "0.2"
+  AUTO_APPROVAL_LIMIT: "50000"
+  MANUAL_REVIEW_THRESHOLD: "100000"
+---
+# Secrets
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+  namespace: insurance-ai
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: "your_secure_postgres_password"
+  REDIS_PASSWORD: "your_secure_redis_password"
+  SECRET_KEY: "your_flask_secret_key_minimum_32_characters"
+  JWT_SECRET_KEY: "your_jwt_secret_key_minimum_32_characters"
+  OPENAI_API_KEY: "your_openai_api_key"
+  ANTHROPIC_API_KEY: "your_anthropic_api_key"
+  TWILIO_ACCOUNT_SID: "your_twilio_account_sid"
+  TWILIO_AUTH_TOKEN: "your_twilio_auth_token"
+  SENDGRID_API_KEY: "your_sendgrid_api_key"
+  GRAFANA_ADMIN_PASSWORD: "your_secure_grafana_password"
+  GRAFANA_SECRET_KEY: "your_grafana_secret_key"
+  SMTP_HOST: "smtp.gmail.com"
+  SMTP_USER: "your_email@gmail.com"
+  SMTP_PASSWORD: "your_email_password"
+  AWS_ACCESS_KEY_ID: "your_aws_access_key"
+  AWS_SECRET_ACCESS_KEY: "your_aws_secret_key"
+  INSURANCE_DATA_API_KEY: "your_insurance_data_api_key"
+  CREDIT_SCORE_API_KEY: "your_credit_score_api_key"
+  VEHICLE_DATA_API_KEY: "your_vehicle_data_api_key"
+  DMV_API_KEY: "your_dmv_api_key"
+  COURT_RECORDS_API_KEY: "your_court_records_api_key"
+---
+# PostgreSQL PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: insurance-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+---
+# Redis PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: insurance-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: fast-ssd
+---
+# Backend Uploads PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-uploads-pvc
+  namespace: insurance-ai
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Gi
+  storageClassName: shared-storage
+---
+# Prometheus PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: insurance-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+---
+# Grafana PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: insurance-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: fast-ssd
+---
+# Loki PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loki-pvc
+  namespace: insurance-ai
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Gi
+  storageClassName: fast-ssd
+
