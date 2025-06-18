@@ -493,12 +493,26 @@ class APIGateway:
                     )
                     
                     return UserResponse.from_orm(updated_user)
-                    
+
             except HTTPException:
                 raise
             except Exception as e:
                 logger.error("Update user failed", error=str(e))
                 raise HTTPException(status_code=500, detail="Failed to update user")
+
+        # ------------------------------------------------------------------
+        # Compatibility aliases matching the auth service endpoints
+        # ------------------------------------------------------------------
+
+        @self.app.get("/api/v1/auth/profile", response_model=UserResponse)
+        async def get_profile(request: Request):
+            """Alias for retrieving the authenticated user's profile."""
+            return await get_current_user(request)
+
+        @self.app.put("/api/v1/auth/profile", response_model=UserResponse)
+        async def update_profile(request: Request, user_update: UserUpdate):
+            """Alias for updating the authenticated user's profile."""
+            return await update_current_user(request, user_update)
         
         @self.app.get("/api/v1/users/{user_id}", response_model=UserResponse)
         async def get_user(request: Request, user_id: uuid.UUID):
