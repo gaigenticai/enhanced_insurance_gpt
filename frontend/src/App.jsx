@@ -40,7 +40,7 @@ const AuthProvider = ({ children }) => {
 
   const fetchUserInfo = async (token) => {
     try {
-      const response = await fetch('/api/v1/auth/profile', {
+      const response = await fetch("http://localhost:8001/api/v1/auth/profile", {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -62,7 +62,7 @@ const AuthProvider = ({ children }) => {
 
   const login = async (userIdOrEmail, password) => {
     try {
-      const response = await fetch('/api/v1/auth/login', {
+      const response = await fetch("http://localhost:8001/api/v1/auth/login", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -92,7 +92,7 @@ const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await fetch('/api/v1/auth/register', {
+      const response = await fetch("http://localhost:8001/api/v1/auth/register", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
